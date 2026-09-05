@@ -219,7 +219,7 @@ def main():
 
     if not BOT_TOKEN:
         raise RuntimeError(
-            "BOT_TOKEN environment variable is missing."
+            "8608799874:AAHJ700GqELB_5pembCEN0vnhkAvR7IWAQw"
         )
 
     receiver_thread = threading.Thread(
