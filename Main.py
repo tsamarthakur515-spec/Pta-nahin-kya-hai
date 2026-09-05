@@ -16,7 +16,7 @@ from telegram.ext import (
 # CONFIG
 # ============================================================
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = os.getenv("8608799874:AAHJ700GqELB_5pembCEN0vnhkAvR7IWAQw")
 
 HOST = "127.0.0.1"
 PORT = 9999
